@@ -21,6 +21,29 @@ let gameOver = false;
 let aiTimer = null;
 const scores = { X: 0, O: 0, draw: 0 };
 
+const STORAGE_KEY = "tictactoe-state";
+
+// Storage can be unavailable (private mode, blocked site data), so fail quietly.
+function loadState() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (!saved) return;
+    for (const key of ["X", "O", "draw"]) {
+      if (Number.isInteger(saved.scores?.[key])) scores[key] = saved.scores[key];
+    }
+    aiToggle.checked = Boolean(saved.vsComputer);
+  } catch {}
+}
+
+function saveState() {
+  try {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ scores, vsComputer: aiToggle.checked })
+    );
+  } catch {}
+}
+
 function getWinner(b) {
   for (const line of WIN_LINES) {
     const [a, c, d] = line;
@@ -56,6 +79,7 @@ function makeMove(index) {
   if (result) {
     gameOver = true;
     scores[result.player]++;
+    saveState();
     statusEl.textContent = `Player ${result.player} wins!`;
     render();
     result.line.forEach((i) => cells[i].classList.add("win"));
@@ -65,6 +89,7 @@ function makeMove(index) {
   if (isFull(board)) {
     gameOver = true;
     scores.draw++;
+    saveState();
     statusEl.textContent = "It's a draw!";
     render();
     return;
@@ -134,9 +159,14 @@ restartBtn.addEventListener("click", newRound);
 
 resetScoresBtn.addEventListener("click", () => {
   scores.X = scores.O = scores.draw = 0;
+  saveState();
   newRound();
 });
 
-aiToggle.addEventListener("change", newRound);
+aiToggle.addEventListener("change", () => {
+  saveState();
+  newRound();
+});
 
+loadState();
 render();
